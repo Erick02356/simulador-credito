@@ -1,0 +1,261 @@
+﻿@model credito.Models.LoanSimulation    
+@{
+    ViewData["Title"] = "Home Page";
+}
+@*Define un div con alineación centrada para el contenido principal*@
+<div class="text-center">
+
+    @*Muestra el título principal de la página*@
+    <h1 class="display-2 fw-bold">Simulador de Crédito de Libre Inversión </h1>
+
+    @*Define el contenedor principal de la página utilizando Bootstrap*@
+    <main class="container d-flex flex-column pt-5 gap-4">
+
+
+        <button id="openModalBtn" style="display: none;" data-bs-toggle="modal" data-bs-target="#welcomeModal">Abrir modal</button>
+
+        <!-- Modal de bienvenida -->
+        <div class="modal fade" id="welcomeModal" tabindex="-1" aria-labelledby="welcomeModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="welcomeModalLabel">¡Bienvenido al simulador de crédito de libre inversión!</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Contenido del artículo -->
+                        <article>
+                            <h3>¡Bienvenido al simulador de crédito de libre inversión! </h3>
+                            <p class="lead">En esta página, puedes simular un crédito de libre inversión ingresando los siguientes datos:</p>
+                            <ul>
+                                <li><strong>Monto del crédito:</strong> Ingresa el monto que deseas solicitar como crédito. Puedes ingresar cualquier cantidad dentro del rango de 1 millón a 70 millones.</li>
+                                <li><strong>Tasa de interés:</strong> Ingresa el porcentaje de interés aplicable al crédito. Si la tasa de interés tiene decimales, recuerda utilizar una coma (,) en lugar de un punto para separar los decimales. Por ejemplo, si la tasa de interés es del 5.5%, debes ingresarla como "5,5".</li>
+                                <li><strong>Número de cuotas:</strong> Ingresa el número de cuotas o meses en los que deseas pagar el crédito. Este valor representa la duración del crédito y determina la cantidad de pagos mensuales que realizarás.</li>
+                            </ul>
+                            <p>Una vez que hayas ingresado estos datos, presiona el botón "Calcular" para obtener una tabla de amortización que muestra cómo se distribuirán tus pagos mensuales a lo largo del período del crédito. Además, podrás visualizar un gráfico que ilustra la evolución del saldo restante, los pagos mensuales, y los intereses y el principal pagado en cada período.</p>
+                            <p>Además, puedes exportar la tabla de amortización a un archivo PDF o Excel para guardarla o compartirla fácilmente.</p>
+                        </article>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @*Sección donde los usuarios ingresan los datos del crédito*@
+
+        <section>
+          
+            @*Descripción del propósito de la sección de entrada de datos*@
+            <article class="pb-5">
+                Ingresa los datos para tu crédito y modifícalos según lo que necesites.
+            </article>
+
+            @*Formulario para capturar los datos del crédito y enviarlos al controlador*@
+            <div class="p-2 d-flex flex-row align-items-center justify-content-center">
+                <form asp-controller="Home" asp-action="Index" class="row g-3">
+
+                    @*Campo para ingresar el monto del crédito*@
+                    <div class="mb-3 col-lg-4 col-md-12">
+                        <label for="LoanAmount" class="form-label fw-bold">Monto a solicitar:</label>
+                        <input type="text" class="form-control form-control-lg border-1 border" id="LoanAmount" name="LoanAmount" />
+                        <div class="alert alert-danger mt-2" role="alert" id="amountError" style="display: none;">El monto debe estar entre 1 millón y 70 millones.</div>
+                    </div>
+
+                    @*Campo para ingresar el porcentaje de interés*@
+                    <div class="mb-3 col-lg-4 col-md-12">
+                        <label for="InterestRate" class="form-label fw-bold">Porcentaje de interés:</label>
+                        <input type="text" class="form-control form-control-lg border-1 border" id="InterestRate" name="InterestRate" />
+                        <div class="alert alert-danger mt-2" role="alert" id="interestError" style="display: none;">Por favor, utiliza la coma para los decimales.</div>
+                    </div>
+
+                    @*Campo para ingresar el número de cuotas*@
+                    <div class="mb-3 col-lg-4 col-md-12">
+                        <label for="NumberOfPayments" class="form-label fw-bold">Número de cuotas:</label>
+                        <input type="text" class="form-control form-control-lg border-1 border" id="NumberOfPayments" name="NumberOfPayments" />
+                    </div>
+
+                    @*Botón para enviar el formulario y calcular el crédito*@
+                    <div class="col-auto w-100 ">
+                        <button type="submit" class="btn btn-primary mb-3 fw-bold" onclick="return validarFormulario()">Calcular</button>
+                    </div>
+
+                    @*Mensaje de validación de campos *@
+                    <div id="errorMessage" class="alert alert-danger mt-2" role="alert" style="display: none;">
+                        Por favor, completa todos los campos.
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        @*Sección donde se mostrarán los resultados del cálculo del crédito*@
+        <section>
+
+            @*Título de la tabla de amortización*@
+        @if (Model != null && Model.AmortizationSchedule != null)
+        {
+            <h2>Tabla de Amortización</h2>
+                @*Contenedor de la tabla de amortización*@
+
+                <div class="table-responsive" id="amortizationTable">
+                <table class="table table-striped">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th scope="col">Mes</th>
+                            <th scope="col">Saldo Restante</th>
+                            <th scope="col">Interés</th>
+                            <th scope="col">Intereses Pagados</th>
+                            <th scope="col">Pago Mensual</th>
+                            <th scope="col">Aporte</th>
+                            <th scope="col">Pagado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AmortizationSchedule)
+                        {
+                            <tr>
+                                <td>@item.PaymentNumber</td>
+                                <td>@item.RemainingBalance.ToString("C", new System.Globalization.CultureInfo("es-MX"))</td>
+                                <td>@item.Interest.ToString("C", new System.Globalization.CultureInfo("es-MX"))</td>
+                                <td>@item.AcumuladorInteres.ToString("C", new System.Globalization.CultureInfo("es-MX"))</td>
+                                <td>@item.PaymentAmount.ToString("C", new System.Globalization.CultureInfo("es-MX"))</td>
+                                <td>@item.Aporte.ToString("C", new System.Globalization.CultureInfo("es-MX"))</td>
+                                <td>@item.Pagado.ToString("C", new System.Globalization.CultureInfo("es-MX"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+                @*Canvas para dibujar el gráfico de amortización*@
+
+                <h2>Gráfico de Amortización</h2>
+                <canvas id="amortizationChart"  ></canvas>
+
+                @*Botones para generar PDF y exportar a Excel*@
+
+                <div class=" ">
+                    <button class="btn btn-danger mt-3 px-2 mx-lg-2" onclick="generatePDF()">Generar PDF</button>
+                    <button onclick="exportToExcel()" class="btn btn-success mt-3 px-2 mx-lg-2">Exportar a Excel</button>
+@*                <a href="@Url.Action("ExportToExcel", "Home")" class="btn btn-success mt-3">Exportar a Excel</a>
+*@
+              </div>
+        }
+           
+           
+        </section>
+
+    </main>
+ 
+</div>
+@section scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Variables para almacenar los datos de la tabla de amortización y el gráfico
+        var paymentNumbers = [];
+        var remainingBalances = [];
+        var AcumuladorInteres = [];
+        var paymentAmounts = [];
+
+        // Obtener datos de la tabla de amortización
+        var rows = document.querySelectorAll("#amortizationTable tbody tr");
+        rows.forEach(row => {
+            var columns = row.querySelectorAll("td");
+            paymentNumbers.push(columns[0].innerText);
+            remainingBalances.push(parseFloat(columns[1].innerText.replace(/[^\d.-]/g, '')));
+            paymentAmounts.push(parseFloat(columns[6].innerText.replace(/[^\d.-]/g, '')));
+            AcumuladorInteres.push(parseFloat(columns[3].innerText.replace(/[^\d.-]/g, '')));
+        });
+
+        // Crear gráfica con Chart.js
+        var ctx = document.getElementById('amortizationChart').getContext('2d');
+        var chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: paymentNumbers, // Etiquetas del eje X (meses)
+                datasets: [{
+                    label: 'Saldo Restante',
+                    data: remainingBalances, // Datos del saldo restante
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }, {
+                    label: 'Pago',
+                    data: paymentAmounts, // Datos de los pagos mensuales
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }, {
+                    label: 'Intereses pagados',
+                    data: AcumuladorInteres, // Datos de los intereses acumulados
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Mes' // Título del eje X
+                        }
+                    },
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Monto' // Título del eje Y
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    <script>
+        // Función para generar el PDF con la tabla de amortización y el gráfico
+        function generatePDF() {
+            // Obtener los datos de la tabla de amortización desde el modelo Razor
+            var amortizationSchedule = @Html.Raw(Json.Serialize(Model != null ? Model.AmortizationSchedule : null));
+
+            // Obtener la URL de datos del gráfico
+            var chartDataURL = document.getElementById('amortizationChart').toDataURL();
+
+            // Verificar si la tabla de amortización está vacía
+            if (amortizationSchedule === null) {
+                console.error('La tabla de amortización está vacía.');
+                return;
+            }
+
+            // Realizar una solicitud POST al controlador para generar el PDF
+            fetch('/Home/GeneratePDFWithChart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ amortizationSchedule: amortizationSchedule, chartDataURL: chartDataURL })
+            })
+                .then(response => response.blob())
+                .then(blob => {
+                    // Crear un enlace de descarga para el PDF generado
+                    const url = window.URL.createObjectURL(new Blob([blob]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', 'Tabla_Amortizacion_Con_Grafico.pdf');
+                    document.body.appendChild(link);
+                    link.click();
+                    link.parentNode.removeChild(link);
+                })
+                .catch(error => console.error('Error al generar el PDF:', error));
+        }
+    </script>
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+    <script>
+        function exportToExcel() {
+            const wb = XLSX.utils.table_to_book(document.getElementById('amortizationTable'));
+            XLSX.writeFile(wb, 'TABLA_AMORTIZACION.xlsx');
+        }
+    </script>
+   
+}
